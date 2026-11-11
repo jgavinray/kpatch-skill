@@ -13,12 +13,13 @@ pass() { echo "PASS: $1"; }
 
 [[ -f $mod ]] || { echo "VERDICT: FAIL (module file $mod not found)"; exit 1; }
 
-# 1. It is a kernel module at all
-file_out=$(file -b "$mod" 2>/dev/null)
-if [[ $file_out == *"kernel module"* ]]; then
-    pass "kernel module file"
+# 1. It is a kernel module at all. Judge by modinfo, not file(1): Ubuntu ships
+# .ko.zst modules and file(1) reports those as compressed data, not modules.
+if modinfo "$mod" >/dev/null 2>&1; then
+    pass "readable as a kernel module"
 else
-    fail "not a kernel module (file says: ${file_out:-unknown})"
+    file_out=$(file -b "$mod" 2>/dev/null)
+    fail "not a kernel module (modinfo cannot read it; file says: ${file_out:-unknown})"
 fi
 
 # 2. Module vermagic matches the running kernel exactly
@@ -30,13 +31,17 @@ else
     fail "vermagic '${vermagic:-none}' does not match running kernel $kver. A livepatch module only loads against the exact kernel it was built for."
 fi
 
-# 3. It is a livepatch module (kpatch-build names it .ko and sets the livepatch ELF note or name)
+# 3. It is a livepatch module. Module names use underscores where the file name
+# uses dashes, so compare against both spellings.
 name=$(modinfo -F name "$mod" 2>/dev/null)
-if [[ $name == livepatch-* ]] || [[ $name == kpatch-* ]]; then
-    pass "livepatch module name '$name'"
-else
-    fail "module name '${name:-unknown}' is not a livepatch module (expected livepatch-* or kpatch-*)"
-fi
+case "$name" in
+    livepatch-*|livepatch_*|kpatch-*|kpatch_*)
+        pass "livepatch module name '$name'"
+        ;;
+    *)
+        fail "module name '${name:-unknown}' is not a livepatch module (expected livepatch-* or kpatch-*)"
+        ;;
+esac
 
 # 4. Livepatch sysfs is present on the target
 if [[ -d /sys/kernel/livepatch ]]; then

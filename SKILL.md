@@ -48,10 +48,16 @@ You are the executor, not the reviewer. This protocol is tuned for models around
 
 The kpatch project is in maintenance mode, deprecated starting with Linux 6.19. The runtime half of kpatch, loading and managing livepatch modules, rides on the in-kernel `CONFIG_LIVEPATCH` infrastructure and stays usable. The build half, `kpatch-build`, is what 26.04 puts at risk. This division drives both runbooks.
 
+## Testing rule
+
+Any change to this skill's scripts or runbooks is validated before it lands. `references/test-plan.md` holds the test matrix, targets, expected outcomes, and the accuracy proof required for each test. Commit messages for this repository must name the testing method used. A change without an executed test behind it does not get committed.
+
+
 ## File map
 
 - `references/ubuntu-24.04.md` is the full 24.04 procedure, environment setup through load and unload.
 - `references/ubuntu-26.04.md` is the 26.04 procedure, deprecation gate first, klp-build path second, kpatch best-effort third.
 - `references/patch-safety-gates.md` is the diff gate list every patch must pass.
+- `references/test-plan.md` is the validation matrix for changes to this skill.
 - `scripts/check-env.sh` is the environment gate. Run it first, on the target host.
 - `scripts/verify-patch.sh` is the module gate. Run it before every load.

@@ -44,12 +44,16 @@ else
     fail "/sys/kernel/livepatch missing"
 fi
 
-# 5. Disk headroom for kpatch-build cache (~15 GB)
-free_kb=$(df -Pk "$HOME" 2>/dev/null | awk 'NR==2 {print $4}')
+# 5. Disk headroom for kpatch-build cache (~15 GB). HOME may be unset in
+# non-login contexts (cloud-init runcmd, cron, systemd units), so fall back
+# through /root to /.
+head_dir="${HOME:-/root}"
+[[ -d $head_dir ]] || head_dir=/
+free_kb=$(df -Pk "$head_dir" 2>/dev/null | awk 'NR==2 {print $4}')
 if [[ -n "${free_kb:-}" ]] && [[ "$free_kb" -ge 15728640 ]]; then
-    pass "disk headroom ${free_kb} KiB >= 15 GiB"
+    pass "disk headroom ${free_kb} KiB >= 15 GiB on ${head_dir}"
 else
-    fail "insufficient disk headroom for kpatch cache (need ~15 GiB, HOME reports ${free_kb:-unknown} KiB)"
+    fail "insufficient disk headroom for kpatch cache (need ~15 GiB, ${head_dir} reports ${free_kb:-unknown} KiB)"
 fi
 
 # 6. Tooling present (informational unless kpatch itself is required)
