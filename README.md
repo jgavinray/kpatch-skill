@@ -25,4 +25,4 @@ Three guard scripts hold the verification, each emitting a `VERDICT: PASS` / `VE
 
 ## License
 
-Apache License 2.0. See [LICENSE](LICENSE).
+GPL-2.0-only, matching the kernel and the kpatch project this skill builds on. See [LICENSE](LICENSE).
