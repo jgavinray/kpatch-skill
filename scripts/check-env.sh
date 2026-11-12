@@ -15,14 +15,20 @@ case "$arch" in
     *) fail "unsupported architecture $arch (need x86_64, ppc64le, or aarch64)" ;;
 esac
 
-# 2. Ubuntu release
+# 2. Ubuntu release. Prefix match so point-release spellings
+# (VERSION_ID="24.04.2") pass, and ID must be ubuntu: any distro
+# self-numbering VERSION_ID=24.04 must not.
 if [[ -r /etc/os-release ]]; then
     # shellcheck disable=SC1091
     source /etc/os-release
-    case "${VERSION_ID:-}" in
-        24.04|26.04) pass "Ubuntu ${VERSION_ID}" ;;
-        *) fail "unsupported Ubuntu release ${VERSION_ID:-unknown} (only 24.04 and 26.04 are in scope)" ;;
-    esac
+    if [[ "${ID:-}" != "ubuntu" ]]; then
+        fail "not Ubuntu (ID=${ID:-unknown}), only Ubuntu 24.04 and 26.04 are in scope"
+    else
+        case "${VERSION_ID:-}" in
+            24.04*|26.04*) pass "Ubuntu ${VERSION_ID}" ;;
+            *) fail "unsupported Ubuntu release ${VERSION_ID:-unknown} (only 24.04 and 26.04 are in scope)" ;;
+        esac
+    fi
 else
     fail "/etc/os-release missing, not an Ubuntu target"
 fi
@@ -70,11 +76,7 @@ dbgsym="/usr/lib/debug/boot/vmlinux-$kver"
 if [[ -e "$dbgsym" ]]; then
     pass "debug symbols at $dbgsym"
 else
-    echo "WARN: $dbgsym not found. Install linux-image-$kver-dbgsym from the ddebs archive."
-    echo "WARN: kpatch-build cannot proceed without matching debug symbols."
-    if [[ "${STRICT:-0}" == "1" ]]; then
-        fail "debug symbols missing (STRICT=1)"
-    fi
+    fail "debug symbols missing: $dbgsym not found. Install linux-image-$kver-dbgsym from the ddebs archive (https://wiki.ubuntu.com/Debug%20Symbol%20Packages). kpatch-build cannot proceed without matching debug symbols."
 fi
 
 if [[ "$fails" -eq 0 ]]; then

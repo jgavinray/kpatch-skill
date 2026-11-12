@@ -1,7 +1,6 @@
 ---
 name: kpatch-livepatch
 description: Build and load kpatch livepatch modules on Ubuntu 24.04 and 26.04, for operators and agents with no livepatch expertise. Use when asked to live-patch a kernel, run kpatch-build, evaluate a patch for kpatch-safety, or decide between kpatch and klp-build.
-disable-model-invocation: false
 ---
 
 # kpatch livepatching on Ubuntu
@@ -16,14 +15,14 @@ Verification outranks everything. A step that produces a claim without a check b
 
 Work these checks top to bottom. Stop at the first failing gate and report it. Do not improvise a workaround for a failed gate. Every numbered step ends with its own verification, named in the step. A step is not complete until its verification has passed.
 
-1. `scripts/check-env.sh` passes on the target host. It verifies architecture, kernel version, `CONFIG_LIVEPATCH`, ftrace support, disk headroom, and debug-symbol availability. This script's verdict is the only accepted evidence this gate passed.
+1. `scripts/check-env.sh` passes on the target host. It verifies architecture, Ubuntu identity, kernel version, `CONFIG_LIVEPATCH`, ftrace support, disk headroom, tooling, and debug symbols. Debug symbols are a hard gate. This script's verdict is the only accepted evidence this gate passed.
 2. Release lookup. Ubuntu 24.04 follows `references/ubuntu-24.04.md`. Ubuntu 26.04 follows `references/ubuntu-26.04.md`. Any other release is out of scope. Say so and stop.
 3. Patch-safety gates in `references/patch-safety-gates.md` pass on the source diff. A diff that changes data structures, `__init` functions, or vdso fails the gates. Rework the patch per that file or report it unfixable for livepatching. Verification here is a per-gate answer quoted from the diff.
-4. Human review of the diff, gate results in hand. This review is itself a verification step and cannot be skipped or self-signed.
+4. Human review of the diff, gate results in hand. This review is itself a verification step and cannot be skipped or self-signed. Present the diff and the gate results and stop until the human approves.
 5. Build step from the release runbook. The runbook's exact commands are the whole build procedure. Do not substitute commands from memory or other distributions. The build is verified only by its `SUCCESS` line and produced module.
-6. `scripts/verify-patch.sh` passes on the built module. It verifies the module matches the running kernel, records the taint bits it will set, and checks the module's livepatch structure. The script's verdict is the only accepted evidence the module is loadable. Never load on a `SUCCESS` build alone.
-7. Apply per the runbook. Then confirm the patch is live by reading `/sys/kernel/livepatch/*/state` (must be `1`) and by confirming the actual behavioral change with a target-specific check. Both observations are required before reporting success.
-8. Post-load watch. Check `dmesg` for livepatch errors and confirm no tasks are stuck in the patch transition. A patch stuck in transition is not a completed patch.
+6. `scripts/verify-patch.sh` passes on the built module. It verifies the module matches the running kernel exactly, imports `klp_enable_patch` (real livepatch structure, not just the name string), matches the host architecture, and records the taint bits it will set. The script's verdict is the only accepted evidence the module is loadable. Never load on a `SUCCESS` build alone.
+7. Apply per the runbook. Then run `scripts/post-load-check.sh`. It reads `/sys/kernel/livepatch/<patch>/enabled` (must be `1`), `/sys/kernel/livepatch/<patch>/transition` (must be `0`), per-object `patched` state, and dmesg, then emits the verdict. Note the livepatch sysfs ABI has no patch-level `state` attribute. The behavioral change must also be confirmed with a target-specific check. Both are required before reporting success.
+8. Post-load watch. After 60 seconds, run `scripts/post-load-check.sh` again. Its verdict is the only accepted evidence the patch completed. A patch stuck in transition is not a completed patch.
 
 ## Small-model protocol
 
@@ -44,9 +43,9 @@ You are the executor, not the reviewer. This protocol is tuned for models around
 |---|---|---|
 | kpatch-build works | yes, supported | unsupported upstream, kernel is past 6.19 deprecation |
 | klp-build alternative | needs 6.19+ kernel, not stock | yes, x86-64, ships in kernel tree at `scripts/livepatch/klp-build` |
-| kpatch CLI (load/unload of livepatch modules) | yes | likely works as a thin manager, build path is the risk |
+| kpatch CLI (load/unload of livepatch modules) | yes | works: it manages plain livepatch modules through `CONFIG_LIVEPATCH`, which is independent of kpatch-build (see the 26.04 runbook's decision rule, section 0 through section 2) |
 
-The kpatch project is in maintenance mode, deprecated starting with Linux 6.19. The runtime half of kpatch, loading and managing livepatch modules, rides on the in-kernel `CONFIG_LIVEPATCH` infrastructure and stays usable. The build half, `kpatch-build`, is what 26.04 puts at risk. This division drives both runbooks.
+The kpatch project is in maintenance mode, deprecated starting with Linux 6.19, per the project notice at the top of the dynup/kpatch README (github.com/dynup/kpatch, issue 1498). The runtime half of kpatch, loading and managing livepatch modules, rides on the in-kernel `CONFIG_LIVEPATCH` infrastructure and stays usable. The build half, `kpatch-build`, is what 26.04 puts at risk. This division drives both runbooks.
 
 ## Testing rule
 
@@ -61,3 +60,4 @@ Any change to this skill's scripts or runbooks is validated before it lands. `re
 - `references/test-plan.md` is the validation matrix for changes to this skill.
 - `scripts/check-env.sh` is the environment gate. Run it first, on the target host.
 - `scripts/verify-patch.sh` is the module gate. Run it before every load.
+- `scripts/post-load-check.sh` is the post-load gate. Run it after loading, and again after 60 seconds.
