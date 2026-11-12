@@ -8,6 +8,8 @@ The bundle has two guard scripts and four documents. Scripts are testable. Docum
 
 ## Test matrix
 
+This matrix records the round-1 (2026-11-11) expectations as executed at the time. Several expectations were superseded by the round-2 remediation: dbgsym is now a hard FAIL (not WARN-allowed), and the name gate was replaced by the klp_enable_patch structure gate. The rows below are historical record, not current expectations. Current expectations are the Round 2 R-matrix further down.
+
 | ID | Test | Target | Expected outcome | Accuracy proof |
 |---|---|---|---|---|
 | T1 | `bash -n` both scripts | local | syntax OK | verbatim command output |
@@ -85,14 +87,14 @@ Round 2 results, executed 2026-11-12 before commit. R1-R3, R8, R10 local; R4-R7,
 | R7 | PASS | the round-1 synthetic `livepatch_t6test.ko` (livepatch-named, no klp import) failed the structure gate, the name no longer suffices |
 | R8 | PASS | bad invocation prints `VERDICT: FAIL (bad invocation: ...)` and exits 2 |
 | R9 | PASS | with no livepatch loaded, `VERDICT: FAIL (no livepatch found ...)` and exit 1 (initial test read `tail`'s exit code, retested directly) |
-| R10 | PASS | `hyper03` absent from all files; the two grep hits were the test plan describing its own checks |
+| R10 | PASS | `hyper03` absent from all operational files (SKILL.md, runbooks, gates, scripts). The only two occurrences sit in this test plan's own meta-descriptions of the check, which must name what they look for. |
 
 Round 2 found one new bug beyond the review's list: gate 4's readelf field extraction. Fixed and retested in the same round.
 
 
 ## Out of scope
 
-Full `kpatch-build` on either target. the lab host's root disk has 12 GB free against a ~15 GB cache requirement, and a noble microVM gets a trimmed rootfs. The build step's verification therefore remains unexecuted and stays labeled as such. No success claims about kpatch-build or klp-build output come out of this round.
+Full `kpatch-build` on either target. The lab host's root disk has 12 GB free against a ~15 GB cache requirement, and a noble microVM gets a trimmed rootfs. The build step's verification therefore remains unexecuted and stays labeled as such. No success claims about kpatch-build or klp-build output come out of this round.
 
 ## Method
 

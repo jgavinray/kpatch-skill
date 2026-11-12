@@ -51,8 +51,9 @@ if ! nm "$mod" >/dev/null 2>&1; then
         inspec="$tmpd/m.ko"
     fi
 fi
-nm_out=$(nm -u "$inspec" 2>/dev/null)
-if grep -qw klp_enable_patch <<< "$nm_out"; then
+if ! command -v nm >/dev/null 2>&1; then
+    echo "WARN: nm unavailable, livepatch structure unverified (name proves nothing, do not load without this check passing)"
+elif grep -qw klp_enable_patch <<< "$(nm -u "$inspec" 2>/dev/null)"; then
     pass "livepatch structure (imports klp_enable_patch)"
 else
     fail "not structurally a livepatch module (klp_enable_patch not imported; name alone proves nothing)"
