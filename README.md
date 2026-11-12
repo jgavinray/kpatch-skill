@@ -22,3 +22,7 @@ Three guard scripts hold the verification, each emitting a `VERDICT: PASS` / `VE
 - Every source diff passes [`references/patch-safety-gates.md`](references/patch-safety-gates.md), then **mandatory human review** — no livepatch tool can verify data-semantic safety.
 - No module is loaded without a passing script verdict. A clean build alone is never evidence.
 - Full validation history, test matrices, and two DeepSeek review rounds (final verdict SHIP) are recorded in [`references/test-plan.md`](references/test-plan.md).
+
+## License
+
+Apache License 2.0. See [LICENSE](LICENSE).
